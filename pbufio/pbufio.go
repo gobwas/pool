@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/gobwas/ws/reuse"
+	"github.com/gobwas/pool"
 )
 
 const (
@@ -30,7 +30,7 @@ func init() {
 // GetWriter returns bufio.Writer with given buffer size.
 // Note that size is rounded up to nearest highest power of two.
 func GetWriter(w io.Writer, size int) *bufio.Writer {
-	n := reuse.CeilToPowerOfTwo(size)
+	n := pool.CeilToPowerOfTwo(size)
 
 	if p, ok := writers[n]; ok {
 		if v := p.Get(); v != nil {
@@ -51,7 +51,7 @@ func PutWriter(w *bufio.Writer, size int) {
 	if size == 0 {
 		size = defaultBufSize
 	}
-	n := reuse.CeilToPowerOfTwo(size)
+	n := pool.CeilToPowerOfTwo(size)
 	if p, ok := writers[n]; ok {
 		w.Reset(nil)
 		p.Put(w)
@@ -61,7 +61,7 @@ func PutWriter(w *bufio.Writer, size int) {
 // GetReader returns bufio.Reader with given buffer size.
 // Note that size is rounded up to nearest highest power of two.
 func GetReader(r io.Reader, size int) *bufio.Reader {
-	n := reuse.CeilToPowerOfTwo(size)
+	n := pool.CeilToPowerOfTwo(size)
 
 	if p, ok := readers[n]; ok {
 		if v := p.Get(); v != nil {
@@ -82,7 +82,7 @@ func PutReader(r *bufio.Reader, size int) {
 	if size == 0 {
 		size = defaultBufSize
 	}
-	n := reuse.CeilToPowerOfTwo(size)
+	n := pool.CeilToPowerOfTwo(size)
 	if p, ok := readers[n]; ok {
 		r.Reset(nil)
 		p.Put(r)

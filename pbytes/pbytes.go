@@ -4,7 +4,7 @@ package pbytes
 import (
 	"sync"
 
-	"github.com/gobwas/ws/reuse"
+	"github.com/gobwas/pool"
 )
 
 const (
@@ -23,7 +23,7 @@ func init() {
 }
 
 func GetBufCap(n int) []byte {
-	n = reuse.CeilToPowerOfTwo(n)
+	n = pool.CeilToPowerOfTwo(n)
 
 	if p, ok := buffers[n]; ok {
 		if buf := p.Get(); buf != nil {
@@ -41,7 +41,7 @@ func GetBufLen(n int) []byte {
 }
 
 func PutBuf(buf []byte) {
-	n := reuse.CeilToPowerOfTwo(cap(buf))
+	n := pool.CeilToPowerOfTwo(cap(buf))
 	if p, ok := buffers[n]; ok {
 		p.Put(buf[:0])
 	}
