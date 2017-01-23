@@ -1,26 +1,9 @@
 // Package pbytes contains tools for pooling byte buffers.
 package pbytes
 
-import (
-	"sync"
+import "github.com/gobwas/pool"
 
-	"github.com/gobwas/pool"
-)
-
-const (
-	btsMinPooledSize = 128
-	btsMaxPooledSize = 65536
-)
-
-var (
-	buffers = map[int]*sync.Pool{}
-)
-
-func init() {
-	for n := btsMinPooledSize; n <= btsMaxPooledSize; n <<= 1 {
-		buffers[n] = new(sync.Pool)
-	}
-}
+var buffers = pool.MakePoolMap(128, 65536)
 
 func GetBufCap(n int) []byte {
 	n = pool.CeilToPowerOfTwo(n)

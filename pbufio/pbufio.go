@@ -4,28 +4,16 @@ package pbufio
 import (
 	"bufio"
 	"io"
-	"sync"
 
 	"github.com/gobwas/pool"
 )
 
-const (
-	minPooledSize  = 256
-	maxPooledSize  = 65536
-	defaultBufSize = 4096
-)
+const defaultBufSize = 4096
 
 var (
-	writers = map[int]*sync.Pool{}
-	readers = map[int]*sync.Pool{}
+	writers = pool.MakePoolMap(256, 65536)
+	readers = pool.MakePoolMap(256, 65536)
 )
-
-func init() {
-	for n := minPooledSize; n <= maxPooledSize; n <<= 1 {
-		writers[n] = new(sync.Pool)
-		readers[n] = new(sync.Pool)
-	}
-}
 
 // GetWriter returns bufio.Writer with given buffer size.
 // Note that size is rounded up to nearest highest power of two.
