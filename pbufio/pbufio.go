@@ -16,8 +16,12 @@ var (
 )
 
 // GetWriter returns bufio.Writer with given buffer size.
+// If size <= 0 the default buffer size is used.
 // Note that size is rounded up to nearest highest power of two.
 func GetWriter(w io.Writer, size int) *bufio.Writer {
+	if size <= 0 {
+		size = defaultBufSize
+	}
 	n := pool.CeilToPowerOfTwo(size)
 
 	if p, ok := writers[n]; ok {
@@ -32,23 +36,21 @@ func GetWriter(w io.Writer, size int) *bufio.Writer {
 }
 
 // PutWriter takes bufio.Writer for future reuse.
-// Note that size should be the same as used to acquire writer.
-// If you have acquired writer from AcquireWriter function, set size to 0.
-// If size == 0 then default buffer size is used.
-func PutWriter(w *bufio.Writer, size int) {
-	if size == 0 {
-		size = defaultBufSize
-	}
-	n := pool.CeilToPowerOfTwo(size)
+func PutWriter(w *bufio.Writer) {
+	w.Reset(nil)
+	n := pool.CeilToPowerOfTwo(w.Available())
 	if p, ok := writers[n]; ok {
-		w.Reset(nil)
 		p.Put(w)
 	}
 }
 
 // GetReader returns bufio.Reader with given buffer size.
+// If size <= 0 the default buffer size is used.
 // Note that size is rounded up to nearest highest power of two.
 func GetReader(r io.Reader, size int) *bufio.Reader {
+	if size <= 0 {
+		size = defaultBufSize
+	}
 	n := pool.CeilToPowerOfTwo(size)
 
 	if p, ok := readers[n]; ok {
@@ -63,14 +65,15 @@ func GetReader(r io.Reader, size int) *bufio.Reader {
 }
 
 // PutReader takes bufio.Reader for future reuse.
-// Note that size should be the same as used to acquire reader.
-// If you have acquired reader from AcquireReader function, set size to 0.
-// If size == 0 then default buffer size is used.
+// Note that size should be the same as in GetReader call.
+// If size <= 0 the default buffer size is used.
+// Note that size is rounded up to nearest highest power of two.
 func PutReader(r *bufio.Reader, size int) {
 	if size == 0 {
 		size = defaultBufSize
 	}
 	n := pool.CeilToPowerOfTwo(size)
+
 	if p, ok := readers[n]; ok {
 		r.Reset(nil)
 		p.Put(r)
