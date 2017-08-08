@@ -7,7 +7,7 @@
 //
 //   func main() {
 //      // Reuse objects in logarithmic range from 0 to 64 (0,1,2,4,6,8,16,32,64).
-//		p := pool.New(0, 64, func(n int) interface{} {
+//      p := pool.New(0, 64, func(n int) interface{} {
 //          return bytes.NewBuffer(make([]byte, 0, n))
 //      })
 //
@@ -18,8 +18,8 @@
 //   }
 //
 // There are non-generic implementations for pooling:
-// - pool/pbytes for `[]byte` reuse;
-// - pool/pbufio for `*bufio.Reader` and `*bufio.Writer` reuse;
+// - pool/pbytes for []byte reuse;
+// - pool/pbufio for *bufio.Reader and *bufio.Writer reuse;
 //
 package pool
 
