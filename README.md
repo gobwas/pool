@@ -19,7 +19,7 @@ func main() {
 	if x == nil {
 		// Create x somehow.
 	}
-    defer pool.Put(x, n)
+	defer pool.Put(x, n)
 	
 	// Work with x.
 }
@@ -36,8 +36,8 @@ func main() {
 	p := pool.New(0, 128, func(n int) interface{} {
 		// Create some object with size n.
 	})
-	x, n := p.Get(100) // Returns object with size 128.
-    defer pool.Put(x, n)
+	x, n := p.Get(100) // Returns object with size 128.defer pool.Put(x, n)
+	defer pool.Put(x, n)
 	
 	// Work with x.
 }
@@ -56,9 +56,9 @@ import "github.com/gobwas/pool/pbytes"
 
 func main() {
 	bts := pbytes.GetCap(100) // Returns make([]byte, 0, 128).
-    defer pbytes.Put(bts)
+	defer pbytes.Put(bts)
 
-    // Work with bts.
+	// Work with bts.
 }
 ```
 
@@ -70,13 +70,13 @@ package main
 import "github.com/gobwas/pool/pbytes"
 
 func main() {
-    // Reuse only slices whose capacity is 128, 256, 512 or 1024.
+	// Reuse only slices whose capacity is 128, 256, 512 or 1024.
 	pool := pbytes.New(128, 1024) 
 
 	bts := pool.GetCap(100) // Returns make([]byte, 0, 128).
-    defer pool.Put(bts)
+	defer pool.Put(bts)
 
-    // Work with bts.
+	// Work with bts.
 }
 ```
 
@@ -91,9 +91,9 @@ import "github.com/gobwas/pool/pbufio"
 
 func main() {
 	bw := pbufio.GetWriter(os.Stdout, 100) // Returns bufio.NewWriterSize(128).
-    defer pbufio.PutWriter(bw)
+	defer pbufio.PutWriter(bw)
 
-    // Work with bw.
+	// Work with bw.
 }
 ```
 
