@@ -1,10 +1,6 @@
 package pbufio
 
-import (
-	"bufio"
-	"testing"
-	"unsafe"
-)
+import "testing"
 
 func TestGetWriter(t *testing.T) {
 	for _, test := range []struct {
@@ -58,15 +54,10 @@ func TestGetReader(t *testing.T) {
 	} {
 		t.Run("", func(t *testing.T) {
 			p := NewReaderPool(test.min, test.max)
-			br := p.Get(nil, test.get)
-			if n, exp := readerSize(br), test.exp; n != exp {
+			_, n := p.Get(nil, test.get)
+			if exp := test.exp; n != exp {
 				t.Errorf("unexpected Get() buffer size: %v; want %v", n, exp)
 			}
 		})
 	}
-}
-
-func readerSize(r *bufio.Reader) int {
-	b := *(*[]byte)(unsafe.Pointer(r))
-	return len(b)
 }

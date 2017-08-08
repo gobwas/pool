@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPoolPowerOfTwoRange(t *testing.T) {
+func TestPoolLogarithmicRange(t *testing.T) {
 	for _, test := range []struct {
 		min, max int
 		exp      []int
@@ -20,7 +20,7 @@ func TestPoolPowerOfTwoRange(t *testing.T) {
 	} {
 		t.Run("", func(t *testing.T) {
 			var act []int
-			PowerOfTwoRange(test.min, test.max, func(n int) {
+			LogarithmicRange(test.min, test.max, func(n int) {
 				act = append(act, n)
 			})
 			if !reflect.DeepEqual(act, test.exp) {

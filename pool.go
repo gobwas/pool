@@ -1,4 +1,26 @@
-// Package pool contains helpers for pooling structures.
+// Package pool contains helpers for pooling structures distinguishable by
+// size.
+//
+// Quick example:
+//
+//   import "github.com/gobwas/pool"
+//
+//   func main() {
+//      // Reuse objects in logarithmic range from 0 to 64 (0,1,2,4,6,8,16,32,64).
+//		p := pool.New(0, 64, func(n int) interface{} {
+//          return bytes.NewBuffer(make([]byte, 0, n))
+//      })
+//
+//      buf, n := p.Get(10) // Returns buffer with 16 capacity.
+//      defer p.Put(buf, n)
+//
+//      // Work with buf.
+//   }
+//
+// There are non-generic implementations for pooling:
+// - pool/pbytes for `[]byte` reuse;
+// - pool/pbufio for `*bufio.Reader` and `*bufio.Writer` reuse;
+//
 package pool
 
 import "sync"
@@ -9,19 +31,19 @@ const (
 	maxintHeadBit = 1 << (bitsize - 2)
 )
 
-// MakePoolMap makes map[int]*sync.Pool where map keys are
-// powers of two from ceiled to power of two min to max.
+// MakePoolMap makes map[int]*sync.Pool where map keys are logarithmic range
+// from min to max.
 func MakePoolMap(min, max int) map[int]*sync.Pool {
 	ret := make(map[int]*sync.Pool)
-	PowerOfTwoRange(min, max, func(n int) {
+	LogarithmicRange(min, max, func(n int) {
 		ret[n] = new(sync.Pool)
 	})
 	return ret
 }
 
-// PowerOfTwoRange iterates from ceiled to power of two min to max,
+// LogarithmicRange iterates from ceiled to power of two min to max,
 // calling cb on each iteration.
-func PowerOfTwoRange(min, max int, cb func(int)) {
+func LogarithmicRange(min, max int, cb func(int)) {
 	if min == 0 {
 		min = 1
 	}
