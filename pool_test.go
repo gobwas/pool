@@ -93,6 +93,9 @@ func TestIsPowerOfTwo(t *testing.T) {
 	}{
 		{0, true},
 		{1, true},
+		{3, false},
+		{maxint, false},
+		{maxintHeadBit, true},
 	} {
 		t.Run(fmt.Sprintf("%d->%t", test.in, test.exp), func(t *testing.T) {
 			if act, exp := IsPowerOfTwo(test.in), test.exp; act != exp {
