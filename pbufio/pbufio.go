@@ -24,17 +24,17 @@ func GetWriter(w io.Writer, size int) *bufio.Writer { return DefaultWriterPool.G
 // PutWriter is a wrapper around DefaultWriterPool.Put().
 func PutWriter(bw *bufio.Writer) { DefaultWriterPool.Put(bw) }
 
-// GetReader pulls bufio.Reader whose buffer has at least size bytes. It returns
+// GetReader returns bufio.Reader whose buffer has at least size bytes. It returns
 // its capacity for further pass to Put().
 // Note that size could be ceiled to the next power of two.
 // GetReader is a wrapper around DefaultReaderPool.Get().
-func GetReader(w io.Reader, size int) (*bufio.Reader, int) { return DefaultReaderPool.Get(w, size) }
+func GetReader(w io.Reader, size int) *bufio.Reader { return DefaultReaderPool.Get(w, size) }
 
 // PutReader takes bufio.Reader and its size for future reuse.
 // It does not reuse bufio.Reader if size is not power of two or is out of pool
 // min/max range.
 // PutReader is a wrapper around DefaultReaderPool.Put().
-func PutReader(bw *bufio.Reader, size int) { DefaultReaderPool.Put(bw, size) }
+func PutReader(bw *bufio.Reader) { DefaultReaderPool.Put(bw) }
 
 // WriterPool contains logic of *bufio.Writer reuse with various size.
 type WriterPool struct {
@@ -94,34 +94,48 @@ func NewReaderPool(min, max int) *ReaderPool {
 	}
 }
 
-// Get pulls bufio.Reader whose buffer has at least size bytes. It returns
-// its capacity for further pass to Put().
+// Get returns bufio.Reader whose buffer has at least size bytes.
 // Note that size could be ceiled to the next power of two.
-func (rp *ReaderPool) Get(r io.Reader, size int) (*bufio.Reader, int) {
+func (rp *ReaderPool) Get(r io.Reader, size int) *bufio.Reader {
 	n := pool.CeilToPowerOfTwo(size)
 
 	pool, ok := rp.pool[n]
 	if !ok {
 		// No such pool that could store such size.
-		return bufio.NewReaderSize(r, size), size
+		return bufio.NewReaderSize(r, size)
 	}
 	if v := pool.Get(); v != nil {
 		br := v.(*bufio.Reader)
 		br.Reset(r)
-		return br, n
+		return br
 	}
 
-	return bufio.NewReaderSize(r, n), n
+	return bufio.NewReaderSize(r, n)
 }
 
 // Put takes bufio.Reader and its size for future reuse.
 // It does not reuse bufio.Reader if size is not power of two or is out of pool
 // min/max range.
-func (rp *ReaderPool) Put(br *bufio.Reader, size int) {
+func (rp *ReaderPool) Put(br *bufio.Reader) {
+	size := readerSize(br)
 	if pool, ok := rp.pool[size]; ok {
 		// Should reset even if we do Reset() inside Get().
 		// This is done to prevent locking underlying io.Reader from GC.
 		br.Reset(nil)
 		pool.Put(br)
 	}
+}
+
+type optimisticReader struct{}
+
+func (optimisticReader) Read(p []byte) (int, error) {
+	return len(p), nil
+}
+
+// readerSize is a workaround to retreive the bufio.Reader's underlying bytes
+// buffer size.
+func readerSize(br *bufio.Reader) int {
+	br.Reset(optimisticReader{})
+	br.ReadByte()
+	return br.Buffered() + 1
 }

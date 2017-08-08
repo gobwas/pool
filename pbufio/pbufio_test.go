@@ -54,8 +54,8 @@ func TestGetReader(t *testing.T) {
 	} {
 		t.Run("", func(t *testing.T) {
 			p := NewReaderPool(test.min, test.max)
-			_, n := p.Get(nil, test.get)
-			if exp := test.exp; n != exp {
+			br := p.Get(nil, test.get)
+			if n, exp := readerSize(br), test.exp; n != exp {
 				t.Errorf("unexpected Get() buffer size: %v; want %v", n, exp)
 			}
 		})
