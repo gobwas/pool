@@ -57,6 +57,10 @@ func (p *Pool) GetLen(n int) []byte { return Get(n, n) }
 
 // Put returns given slice to reuse pool.
 func (p *Pool) Put(bts []byte) {
+	if cap(bts) < p.min {
+		return
+	}
+
 	hdr := *(*reflect.SliceHeader)(unsafe.Pointer(&bts))
 	data := hdr.Data - uintptr(guardSize)
 
