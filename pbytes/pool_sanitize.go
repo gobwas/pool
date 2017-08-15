@@ -4,8 +4,11 @@ package pbytes
 
 import (
 	"reflect"
+	"runtime"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const magic = uint64(0x777742)
@@ -39,11 +42,9 @@ func (p *Pool) Get(n, c int) []byte {
 	pages := (c+guardSize)/pageSize + 1
 	size := pages * pageSize
 
-	bts := make([]byte, 0, size)
-	hdr := *(*reflect.SliceHeader)(unsafe.Pointer(&bts))
-	data := hdr.Data
+	bts := alloc(size)
 
-	g := (*guard)(unsafe.Pointer(data))
+	g := (*guard)(unsafe.Pointer(&bts[0]))
 	*g = guard{
 		magic: magic,
 		size:  size,
@@ -62,25 +63,56 @@ func (p *Pool) Put(bts []byte) {
 	}
 
 	hdr := *(*reflect.SliceHeader)(unsafe.Pointer(&bts))
-	data := hdr.Data - uintptr(guardSize)
+	ptr := hdr.Data - uintptr(guardSize)
 
-	g := (*guard)(unsafe.Pointer(data))
+	g := (*guard)(unsafe.Pointer(ptr))
 	if g.magic != magic {
 		panic("unknown slice returned to the pool")
 	}
 
 	// Disable read and write on bytes memory pages. This will cause panic on
 	// incorrect access to returned slice.
-	mprotect(data, g.size)
+	mprotect(ptr, false, false, g.size)
+
+	runtime.SetFinalizer(&bts, func(b *[]byte) {
+		mprotect(ptr, true, true, g.size)
+		free(*(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: ptr,
+			Len:  g.size,
+			Cap:  g.size,
+		})))
+	})
 }
 
-func mprotect(ptr uintptr, size int) {
-	var (
-		// Need to avoid "EINVAL addr is not a valid pointer,
-		// or not a multiple of PAGESIZE."
-		start = ptr & ^(uintptr(syscall.Getpagesize() - 1))
-		prot  = uintptr(syscall.PROT_NONE)
-	)
+func alloc(n int) []byte {
+	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE|unix.PROT_EXEC, unix.MAP_SHARED|unix.MAP_ANONYMOUS)
+	if err != nil {
+		panic(err.Error())
+	}
+	return b
+}
+
+func free(b []byte) {
+	if err := unix.Munmap(b); err != nil {
+		panic(err.Error())
+	}
+}
+
+func mprotect(ptr uintptr, r, w bool, size int) {
+	// Need to avoid "EINVAL addr is not a valid pointer,
+	// or not a multiple of PAGESIZE."
+	start := ptr & ^(uintptr(syscall.Getpagesize() - 1))
+
+	prot := uintptr(syscall.PROT_EXEC)
+	switch {
+	case r && w:
+		prot |= syscall.PROT_READ | syscall.PROT_WRITE
+	case r:
+		prot |= syscall.PROT_READ
+	case w:
+		prot |= syscall.PROT_WRITE
+	}
+
 	_, _, err := syscall.Syscall(syscall.SYS_MPROTECT,
 		start, uintptr(size), prot,
 	)

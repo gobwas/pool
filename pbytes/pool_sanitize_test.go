@@ -4,9 +4,11 @@ package pbytes
 
 import (
 	"crypto/rand"
+	"runtime"
 	"strconv"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestPoolSanitize(t *testing.T) {
@@ -50,6 +52,12 @@ func TestPoolSanitize(t *testing.T) {
 			// Return bts to pool. After this point all actions on bts are
 			// prohibited.
 			p.Put(bts)
+			//p.Put(bts)
+			bts = nil
+
+			runtime.GC()
+			time.Sleep(time.Millisecond)
+			runtime.GC()
 		})
 	}
 }
