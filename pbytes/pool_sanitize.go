@@ -5,6 +5,7 @@ package pbytes
 import (
 	"reflect"
 	"runtime"
+	"sync/atomic"
 	"syscall"
 	"unsafe"
 
@@ -14,8 +15,9 @@ import (
 const magic = uint64(0x777742)
 
 type guard struct {
-	magic uint64
-	size  int
+	magic  uint64
+	size   int
+	owners int32
 }
 
 const guardSize = int(unsafe.Sizeof(guard{}))
@@ -34,9 +36,6 @@ func (p *Pool) Get(n, c int) []byte {
 	if n > c {
 		panic("requested length is greater than capacity")
 	}
-	if p.min > c || c > p.max {
-		return make([]byte, n, c)
-	}
 
 	pageSize := syscall.Getpagesize()
 	pages := (c+guardSize)/pageSize + 1
@@ -46,8 +45,9 @@ func (p *Pool) Get(n, c int) []byte {
 
 	g := (*guard)(unsafe.Pointer(&bts[0]))
 	*g = guard{
-		magic: magic,
-		size:  size,
+		magic:  magic,
+		size:   size,
+		owners: 1,
 	}
 
 	return bts[guardSize : guardSize+n]
@@ -58,16 +58,15 @@ func (p *Pool) GetLen(n int) []byte { return Get(n, n) }
 
 // Put returns given slice to reuse pool.
 func (p *Pool) Put(bts []byte) {
-	if cap(bts) < p.min {
-		return
-	}
-
 	hdr := *(*reflect.SliceHeader)(unsafe.Pointer(&bts))
 	ptr := hdr.Data - uintptr(guardSize)
 
 	g := (*guard)(unsafe.Pointer(ptr))
 	if g.magic != magic {
 		panic("unknown slice returned to the pool")
+	}
+	if n := atomic.AddInt32(&g.owners, -1); n < 0 {
+		panic("multiple Put() detected")
 	}
 
 	// Disable read and write on bytes memory pages. This will cause panic on
