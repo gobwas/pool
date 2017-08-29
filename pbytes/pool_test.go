@@ -5,6 +5,7 @@ package pbytes
 import (
 	"crypto/rand"
 	"reflect"
+	"strconv"
 	"testing"
 	"unsafe"
 )
@@ -80,4 +81,31 @@ func TestPoolPut(t *testing.T) {
 func data(p []byte) uintptr {
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&p))
 	return hdr.Data
+}
+
+func BenchmarkPool(b *testing.B) {
+	for _, size := range []int{
+		1 << 4,
+		1 << 5,
+		1 << 6,
+		1 << 7,
+		1 << 8,
+		1 << 9,
+	} {
+		b.Run(strconv.Itoa(size)+"(pool)", func(b *testing.B) {
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					p := GetLen(size)
+					Put(p)
+				}
+			})
+		})
+		b.Run(strconv.Itoa(size)+"(make)", func(b *testing.B) {
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					_ = make([]byte, size)
+				}
+			})
+		})
+	}
 }
