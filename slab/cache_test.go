@@ -8,6 +8,41 @@ import (
 	"testing"
 )
 
+func TestGetSlabSize(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		size int
+		page int
+		exp  int
+	}{
+		{
+			size: 1,
+			page: 64,
+			exp:  64,
+		},
+		{
+			size: 10,
+			page: 64,
+			exp:  128,
+		},
+		{
+			size: 64,
+			page: 64,
+			exp:  512,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			act := getSlabSize(test.size, test.page)
+			if exp := test.exp; act != exp {
+				t.Errorf(
+					"getSlabSize(%d, %d) = %d; want %d",
+					test.size, test.page, act, exp,
+				)
+			}
+		})
+	}
+}
+
 func TestCache(t *testing.T) {
 	for _, test := range []struct {
 		size  int

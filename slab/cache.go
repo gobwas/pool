@@ -40,10 +40,11 @@ func New(size int, config *Config) *Cache {
 	if size <= 0 {
 		panic("size is too small")
 	}
+	pagesize := syscall.Getpagesize()
 	bufsize := size + ctlsize
 	return &Cache{
 		heap:     newSlabHeap(2),
-		slabSize: getSlabSize(bufsize),
+		slabSize: getSlabSize(bufsize, pagesize),
 		bufSize:  bufsize,
 		magic:    rand.Uint32(),
 		config:   config.withDefaults(),
@@ -155,17 +156,17 @@ func (c *Cache) grow() (s *slab) {
 // increases. The SunOS 5.4 implementation limits internal fragmentation to
 // 12.5% (1/8), since this was found to be the empirical sweet-spot in the
 // trade-off between internal and external fragmenta- tion.
-func getSlabSize(sz int) int {
-	p := uint(syscall.Getpagesize())
-	n := uint(sz) * 8 // bufsize should be at least 1/8 of slab;
+func getSlabSize(size, page int) int {
+	p := uint(page)
+	n := uint(size) * 8 // bufsize should be at least 1/8 of slab;
 	if n < p {
 		return int(p)
 	}
-	n ^= (p - 1) // and must be multiple of page size.
-	if n&(p-1) != 0 {
-		n <<= 1
+	r := n & ^(p - 1) // and must be multiple of page size.
+	if r < n {
+		r <<= 1
 	}
-	return int(n)
+	return int(r)
 }
 
 func salloc(s *slab) []byte {
