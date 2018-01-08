@@ -134,6 +134,8 @@ func (optimisticReader) Read(p []byte) (int, error) {
 
 // readerSize is a workaround to retreive the bufio.Reader's underlying bytes
 // buffer size.
+//
+// TODO(gobwas): this should be moved under tag when go 1.10 will be released.
 func readerSize(br *bufio.Reader) int {
 	br.Reset(optimisticReader{})
 	br.ReadByte()
