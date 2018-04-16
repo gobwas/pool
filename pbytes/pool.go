@@ -21,6 +21,15 @@ func New(min, max int) *Pool {
 	}
 }
 
+// Add new pool to map
+func (p *Pool) AddPool(size int) {
+	x := pool.CeilToPowerOfTwo(size)
+
+	if _, ok := p.pool[x]; !ok {
+		p.pool[x] = new(sync.Pool)
+	}
+}
+
 // Get returns probably reused slice of bytes with at least capacity of c and
 // exactly len of n.
 func (p *Pool) Get(n, c int) []byte {
