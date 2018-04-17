@@ -1,4 +1,4 @@
-package pool
+package pmath
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPoolLogarithmicRange(t *testing.T) {
+func TestLogarithmicRange(t *testing.T) {
 	for _, test := range []struct {
 		min, max int
 		exp      []int

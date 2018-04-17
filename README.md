@@ -17,7 +17,7 @@ import "github.com/gobwas/pool"
 func main() {
 	x, n := pool.Get(100) // Returns object with size 128 or nil.
 	if x == nil {
-		// Create x somehow.
+		// Create x somehow with knowledge that n is 128.
 	}
 	defer pool.Put(x, n)
 	
@@ -25,7 +25,7 @@ func main() {
 }
 ```
 
-Like `sync.Pool`, generic way allows you to pass initialization function for custom pool:
+Pool allows you to pass specific options for constructing custom pool:
 
 ```go
 package main
@@ -33,17 +33,19 @@ package main
 import "github.com/gobwas/pool"
 
 func main() {
-	p := pool.New(0, 128, func(n int) interface{} {
-		// Create some object with size n.
-	})
-	x, n := p.Get(100) // Returns object with size 128.defer pool.Put(x, n)
-	defer pool.Put(x, n)
+	p := pool.Custom(
+        pool.WithLogSizeMapping(),      // Will ceil size n passed to Get(n) to nearest power of two.
+        pool.WithLogSizeRange(64, 512), // Will reuse objects in logarithmic range [64, 512].
+        pool.WithSize(65536),           // Will reuse object with size 65536.
+    )
+	x, n := p.Get(1000)  // Returns nil and 1000 because mapped size 1000 => 1024 is not reusing by the pool.
+    defer pool.Put(x, n) // Will not reuse x.
 	
 	// Work with x.
 }
 ```
 
-Note that there are few non-generic pooling implementations.
+Note that there are few non-generic pooling implementations inside subpackages.
 
 ## pbytes
 
