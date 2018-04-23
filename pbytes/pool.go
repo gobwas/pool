@@ -2,23 +2,25 @@
 
 package pbytes
 
-import (
-	"sync"
-
-	"github.com/gobwas/pool"
-)
+import "github.com/gobwas/pool"
 
 // Pool contains logic of reusing byte slices of various size.
 type Pool struct {
-	pool map[int]*sync.Pool
+	pool *pool.Pool
 }
 
-// New creates new Pool which reuses min and max sized slices.
-// Note that min is ceiled to the next power of two.
+// New creates new Pool that reuses slices which size is in logarithmic range
+// [min, max].
+//
+// Note that it is a shortcut for Custom() constructor with Options provided by
+// pool.WithLogSizeMapping() and pool.WithLogSizeRange(min, max) calls.
 func New(min, max int) *Pool {
-	return &Pool{
-		pool: pool.MakePoolMap(min, max),
-	}
+	return &Pool{pool.New(min, max)}
+}
+
+// New creates new Pool with given options.
+func Custom(opts ...pool.Option) *Pool {
+	return &Pool{pool.Custom(opts...)}
 }
 
 // Get returns probably reused slice of bytes with at least capacity of c and
@@ -28,14 +30,8 @@ func (p *Pool) Get(n, c int) []byte {
 		panic("requested length is greater than capacity")
 	}
 
-	x := pool.CeilToPowerOfTwo(c)
-
-	pool, ok := p.pool[x]
-	if !ok {
-		// No such pool that could store such capacity.
-		return make([]byte, n, c)
-	}
-	if v := pool.Get(); v != nil {
+	v, x := p.pool.Get(c)
+	if v != nil {
 		bts := v.([]byte)
 		bts = bts[:n]
 		return bts
@@ -48,10 +44,7 @@ func (p *Pool) Get(n, c int) []byte {
 // It does not reuse bytes whose size is not power of two or is out of pool
 // min/max range.
 func (p *Pool) Put(bts []byte) {
-	c := cap(bts)
-	if pool, ok := p.pool[c]; ok {
-		pool.Put(bts)
-	}
+	p.pool.Put(bts, cap(bts))
 }
 
 // GetCap returns probably reused slice of bytes with at least capacity of n.
