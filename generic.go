@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"math"
 	"sync"
 
 	"github.com/gobwas/pool/internal/pmath"
@@ -27,6 +28,9 @@ func Put(x interface{}, size int) { DefaultPool.Put(x, size) }
 type Pool struct {
 	pool map[int]*sync.Pool
 	size func(int) int
+
+	min int
+	max int
 }
 
 // New creates new Pool that reuses objects which size is in logarithmic range
@@ -46,6 +50,8 @@ func Custom(opts ...Option) *Pool {
 	p := &Pool{
 		pool: make(map[int]*sync.Pool),
 		size: pmath.Identity,
+		min: math.MaxInt64,
+		max: math.MinInt64,
 	}
 
 	c := (*poolConfig)(p)
@@ -61,8 +67,10 @@ func Custom(opts ...Option) *Pool {
 // Note that size could be ceiled to the next power of two.
 func (p *Pool) Get(size int) (interface{}, int) {
 	n := p.size(size)
-	if pool := p.pool[n]; pool != nil {
-		return pool.Get(), n
+	if n >= p.min && n <= p.max {
+		if pool := p.pool[n]; pool != nil {
+			return pool.Get(), n
+		}
 	}
 	return nil, size
 }
@@ -78,6 +86,12 @@ type poolConfig Pool
 
 // AddSize adds size n to the map.
 func (p *poolConfig) AddSize(n int) {
+	if n > p.max {
+		p.max = n
+	}
+	if n < p.min {
+		p.min = n
+	}
 	p.pool[n] = new(sync.Pool)
 }
 
